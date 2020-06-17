@@ -469,7 +469,7 @@ public class Dictionary {
 						}
 					}
 
-					if (entity.getContentLength() > 0) {
+					//if (entity.getContentLength() > 0) {
 						in = new BufferedReader(new InputStreamReader(entity.getContent(), charset));
 						String line;
 						while ((line = in.readLine()) != null) {
@@ -478,7 +478,7 @@ public class Dictionary {
 						in.close();
 						response.close();
 						return buffer;
-					}
+					//}
 			}
 			}
 			response.close();
