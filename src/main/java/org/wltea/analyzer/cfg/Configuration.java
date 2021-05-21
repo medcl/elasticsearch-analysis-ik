@@ -21,6 +21,9 @@ public class Configuration {
 	//是否启用智能分词
 	private  boolean useSmart;
 
+	//是否使用停止词
+	private boolean useStopWords;
+
 	//是否启用远程词典加载
 	private boolean enableRemoteDict=false;
 
@@ -34,6 +37,7 @@ public class Configuration {
 		this.settings=settings;
 
 		this.useSmart = settings.get("use_smart", "false").equals("true");
+		this.useStopWords = settings.get("use_stopwords", "true").equals("true");
 		this.enableLowercase = settings.get("enable_lowercase", "true").equals("true");
 		this.enableRemoteDict = settings.get("enable_remote_dict", "true").equals("true");
 
@@ -50,6 +54,10 @@ public class Configuration {
 
 	public boolean isUseSmart() {
 		return useSmart;
+	}
+
+	public boolean isUseStopWords() {
+		return useStopWords;
 	}
 
 	public Configuration setUseSmart(boolean useSmart) {
