@@ -27,6 +27,8 @@ public class Configuration {
 	//是否启用小写处理
 	private boolean enableLowercase=true;
 
+	//是否包含单个字符
+	private boolean includeSingleChar=false;
 
 	@Inject
 	public Configuration(Environment env,Settings settings) {
@@ -36,6 +38,7 @@ public class Configuration {
 		this.useSmart = settings.get("use_smart", "false").equals("true");
 		this.enableLowercase = settings.get("enable_lowercase", "true").equals("true");
 		this.enableRemoteDict = settings.get("enable_remote_dict", "true").equals("true");
+		this.includeSingleChar = settings.get("include_single_char", "false").equals("true");
 
 		Dictionary.initial(this);
 
@@ -71,5 +74,14 @@ public class Configuration {
 
 	public boolean isEnableLowercase() {
 		return enableLowercase;
+	}
+
+	public boolean isIncludeSingleChar() {
+		return includeSingleChar;
+	}
+
+	public Configuration setIncludeSingleChar(boolean includeSingleChar) {
+		this.includeSingleChar = includeSingleChar;
+		return this;
 	}
 }

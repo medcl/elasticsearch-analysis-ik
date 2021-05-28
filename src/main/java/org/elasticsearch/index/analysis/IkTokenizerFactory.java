@@ -19,6 +19,10 @@ public class IkTokenizerFactory extends AbstractTokenizerFactory {
       return new IkTokenizerFactory(indexSettings,env, name, settings).setSmart(false);
   }
 
+  public static IkTokenizerFactory getIkIncludeCharTokenizerFactory(IndexSettings indexSettings, Environment env, String name, Settings settings) {
+      return new IkTokenizerFactory(indexSettings,env, name, settings).setSmart(false).setIncludeSingleChar(true);
+  }
+
   public static IkTokenizerFactory getIkSmartTokenizerFactory(IndexSettings indexSettings, Environment env, String name, Settings settings) {
       return new IkTokenizerFactory(indexSettings,env, name, settings).setSmart(true);
   }
@@ -26,6 +30,11 @@ public class IkTokenizerFactory extends AbstractTokenizerFactory {
   public IkTokenizerFactory setSmart(boolean smart){
         this.configuration.setUseSmart(smart);
         return this;
+  }
+
+  public IkTokenizerFactory setIncludeSingleChar(boolean singleChar) {
+      this.configuration.setIncludeSingleChar(singleChar);
+      return this;
   }
 
   @Override

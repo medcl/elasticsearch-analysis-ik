@@ -24,6 +24,7 @@ public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
 
         extra.put("ik_smart", IkTokenizerFactory::getIkSmartTokenizerFactory);
         extra.put("ik_max_word", IkTokenizerFactory::getIkTokenizerFactory);
+        extra.put("ik_max_word_char", IkTokenizerFactory::getIkIncludeCharTokenizerFactory);
 
         return extra;
     }
@@ -34,6 +35,7 @@ public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
 
         extra.put("ik_smart", IkAnalyzerProvider::getIkSmartAnalyzerProvider);
         extra.put("ik_max_word", IkAnalyzerProvider::getIkAnalyzerProvider);
+        extra.put("ik_max_word_char", IkAnalyzerProvider::getIkIncludeCharAnalyzerProvider);
 
         return extra;
     }
