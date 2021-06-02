@@ -19,6 +19,10 @@ public class Monitor implements Runnable {
 
 	private static CloseableHttpClient httpclient = HttpClients.createDefault();
 	/*
+	 * 自定义词典名，默认为common
+	 */
+	private final String customRemoteDictName;
+	/*
 	 * 上次更改时间
 	 */
 	private String last_modified;
@@ -32,10 +36,11 @@ public class Monitor implements Runnable {
 	 */
 	private String location;
 
-	public Monitor(String location) {
+	public Monitor(String location, String customRemoteDictName) {
 		this.location = location;
 		this.last_modified = null;
 		this.eTags = null;
+		this.customRemoteDictName = customRemoteDictName;
 	}
 
 	public void run() {
@@ -84,7 +89,7 @@ public class Monitor implements Runnable {
 						||((response.getLastHeader("ETag")!=null) && !response.getLastHeader("ETag").getValue().equalsIgnoreCase(eTags))) {
 
 					// 远程词库有更新,需要重新加载词典，并修改last_modified,eTags
-					Dictionary.getSingleton().reLoadMainDict();
+					Dictionary.getDictionary(customRemoteDictName).reLoadMainDict();
 					last_modified = response.getLastHeader("Last-Modified")==null?null:response.getLastHeader("Last-Modified").getValue();
 					eTags = response.getLastHeader("ETag")==null?null:response.getLastHeader("ETag").getValue();
 				}

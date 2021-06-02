@@ -23,6 +23,8 @@ public class Configuration {
 
 	//是否启用远程词典加载
 	private boolean enableRemoteDict=false;
+	//自定义词库名
+	private String remoteDictName="";
 
 	//是否启用小写处理
 	private boolean enableLowercase=true;
@@ -36,6 +38,7 @@ public class Configuration {
 		this.useSmart = settings.get("use_smart", "false").equals("true");
 		this.enableLowercase = settings.get("enable_lowercase", "true").equals("true");
 		this.enableRemoteDict = settings.get("enable_remote_dict", "true").equals("true");
+		this.remoteDictName = settings.get("custom_dict_name", "");
 
 		Dictionary.initial(this);
 
@@ -67,6 +70,9 @@ public class Configuration {
 
 	public boolean isEnableRemoteDict() {
 		return enableRemoteDict;
+	}
+	public String getRemoteDictName() {
+		return remoteDictName;
 	}
 
 	public boolean isEnableLowercase() {

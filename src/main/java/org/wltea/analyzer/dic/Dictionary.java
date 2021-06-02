@@ -67,7 +67,7 @@ public class Dictionary {
 	/*
 	 * 词典单子实例
 	 */
-	private static Dictionary singleton;
+	private static Map<String, Dictionary> dictionaryMap = new HashMap<String, Dictionary>();
 
 	private DictSegment _MainDict;
 
@@ -143,26 +143,25 @@ public class Dictionary {
 	 * @return Dictionary
 	 */
 	public static synchronized void initial(Configuration cfg) {
-		if (singleton == null) {
+		if (!dictionaryMap.containsKey(cfg.getRemoteDictName())) {
 			synchronized (Dictionary.class) {
-				if (singleton == null) {
-
-					singleton = new Dictionary(cfg);
-					singleton.loadMainDict();
-					singleton.loadSurnameDict();
-					singleton.loadQuantifierDict();
-					singleton.loadSuffixDict();
-					singleton.loadPrepDict();
-					singleton.loadStopWordDict();
-
+				if (!dictionaryMap.containsKey(cfg.getRemoteDictName())) {
+					Dictionary newDict = new Dictionary(cfg);
+					newDict.loadMainDict();
+					newDict.loadSurnameDict();
+					newDict.loadQuantifierDict();
+					newDict.loadSuffixDict();
+					newDict.loadPrepDict();
+					newDict.loadStopWordDict();
+					dictionaryMap.put(cfg.getRemoteDictName(), newDict);
 					if(cfg.isEnableRemoteDict()){
 						// 建立监控线程
-						for (String location : singleton.getRemoteExtDictionarys()) {
+						for (String location : dictionaryMap.get(cfg.getRemoteDictName()).getRemoteExtDictionarys()) {
 							// 10 秒是初始延迟可以修改的 60是间隔时间 单位秒
-							pool.scheduleAtFixedRate(new Monitor(location), 10, 60, TimeUnit.SECONDS);
+							pool.scheduleAtFixedRate(new Monitor(location, cfg.getRemoteDictName()), 10, 60, TimeUnit.SECONDS);
 						}
-						for (String location : singleton.getRemoteExtStopWordDictionarys()) {
-							pool.scheduleAtFixedRate(new Monitor(location), 10, 60, TimeUnit.SECONDS);
+						for (String location : dictionaryMap.get(cfg.getRemoteDictName()).getRemoteExtStopWordDictionarys()) {
+							pool.scheduleAtFixedRate(new Monitor(location, cfg.getRemoteDictName()), 10, 60, TimeUnit.SECONDS);
 						}
 					}
 
@@ -241,6 +240,9 @@ public class Dictionary {
 			String[] filePaths = remoteExtDictCfg.split(";");
 			for (String filePath : filePaths) {
 				if (filePath != null && !"".equals(filePath.trim())) {
+					if (this.configuration.getRemoteDictName()!="") {
+						filePath += "/" + this.configuration.getRemoteDictName();
+					}
 					remoteExtDictFiles.add(filePath);
 
 				}
@@ -274,6 +276,9 @@ public class Dictionary {
 			String[] filePaths = remoteExtStopWordDictCfg.split(";");
 			for (String filePath : filePaths) {
 				if (filePath != null && !"".equals(filePath.trim())) {
+					if (this.configuration.getRemoteDictName()!="") {
+						filePath += "/" + this.configuration.getRemoteDictName();
+					}
 					remoteExtStopWordDictFiles.add(filePath);
 
 				}
@@ -287,16 +292,27 @@ public class Dictionary {
 	}
 
 
+//	/**
+//	 * 获取词典单子实例
+//	 *
+//	 * @return Dictionary 单例对象
+//	 */
+//	public static Dictionary getSingleton() {
+//		if (singleton == null) {
+//			throw new IllegalStateException("词典尚未初始化，请先调用initial方法");
+//		}
+//		return singleton;
+//	}
 	/**
-	 * 获取词典单子实例
-	 * 
-	 * @return Dictionary 单例对象
+	 * 获取词典实例
+	 *
+	 * @return Dictionary 对象
 	 */
-	public static Dictionary getSingleton() {
-		if (singleton == null) {
+	public static Dictionary getDictionary(String dictName) {
+		if (!dictionaryMap.containsKey(dictName)) {
 			throw new IllegalStateException("ik dict has not been initialized yet, please call initial method first.");
 		}
-		return singleton;
+		return dictionaryMap.get(dictName);
 	}
 
 
@@ -311,7 +327,7 @@ public class Dictionary {
 			for (String word : words) {
 				if (word != null) {
 					// 批量加载词条到主内存词典中
-					singleton._MainDict.fillSegment(word.trim().toCharArray());
+					this._MainDict.fillSegment(word.trim().toCharArray());
 				}
 			}
 		}
@@ -325,7 +341,7 @@ public class Dictionary {
 			for (String word : words) {
 				if (word != null) {
 					// 批量屏蔽词条
-					singleton._MainDict.disableSegment(word.trim().toCharArray());
+					this._MainDict.disableSegment(word.trim().toCharArray());
 				}
 			}
 		}
@@ -337,7 +353,7 @@ public class Dictionary {
 	 * @return Hit 匹配结果描述
 	 */
 	public Hit matchInMainDict(char[] charArray) {
-		return singleton._MainDict.match(charArray);
+		return this._MainDict.match(charArray);
 	}
 
 	/**
@@ -346,7 +362,7 @@ public class Dictionary {
 	 * @return Hit 匹配结果描述
 	 */
 	public Hit matchInMainDict(char[] charArray, int begin, int length) {
-		return singleton._MainDict.match(charArray, begin, length);
+		return this._MainDict.match(charArray, begin, length);
 	}
 
 	/**
@@ -355,7 +371,7 @@ public class Dictionary {
 	 * @return Hit 匹配结果描述
 	 */
 	public Hit matchInQuantifierDict(char[] charArray, int begin, int length) {
-		return singleton._QuantifierDict.match(charArray, begin, length);
+		return this._QuantifierDict.match(charArray, begin, length);
 	}
 
 	/**
@@ -374,7 +390,7 @@ public class Dictionary {
 	 * @return boolean
 	 */
 	public boolean isStopWord(char[] charArray, int begin, int length) {
-		return singleton._StopWords.match(charArray, begin, length).isMatch();
+		return this._StopWords.match(charArray, begin, length).isMatch();
 	}
 
 	/**
@@ -565,7 +581,7 @@ public class Dictionary {
 		logger.info("start to reload ik dict.");
 		// 新开一个实例加载词典，减少加载过程对当前词典使用的影响
 		Dictionary tmpDict = new Dictionary(configuration);
-		tmpDict.configuration = getSingleton().configuration;
+		tmpDict.configuration = this.configuration;
 		tmpDict.loadMainDict();
 		tmpDict.loadStopWordDict();
 		_MainDict = tmpDict._MainDict;

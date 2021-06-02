@@ -25,6 +25,7 @@
  */
 package org.wltea.analyzer.core;
 
+import org.wltea.analyzer.cfg.Configuration;
 import org.wltea.analyzer.dic.Dictionary;
 import org.wltea.analyzer.dic.Hit;
 
@@ -39,12 +40,14 @@ class CJKSegmenter implements ISegmenter {
 	
 	//子分词器标签
 	static final String SEGMENTER_NAME = "CJK_SEGMENTER";
+	private final Configuration cfg;
 	//待处理的分词hit队列
 	private List<Hit> tmpHits;
 	
 	
-	CJKSegmenter(){
+	CJKSegmenter(Configuration cfg){
 		this.tmpHits = new LinkedList<Hit>();
+		this.cfg = cfg;
 	}
 
 	/* (non-Javadoc)
@@ -58,7 +61,7 @@ class CJKSegmenter implements ISegmenter {
 				//处理词段队列
 				Hit[] tmpArray = this.tmpHits.toArray(new Hit[this.tmpHits.size()]);
 				for(Hit hit : tmpArray){
-					hit = Dictionary.getSingleton().matchWithHit(context.getSegmentBuff(), context.getCursor() , hit);
+					hit = Dictionary.getDictionary(cfg.getRemoteDictName()).matchWithHit(context.getSegmentBuff(), context.getCursor() , hit);
 					if(hit.isMatch()){
 						//输出当前的词
 						Lexeme newLexeme = new Lexeme(context.getBufferOffset() , hit.getBegin() , context.getCursor() - hit.getBegin() + 1 , Lexeme.TYPE_CNWORD);
@@ -77,7 +80,7 @@ class CJKSegmenter implements ISegmenter {
 			
 			//*********************************
 			//再对当前指针位置的字符进行单字匹配
-			Hit singleCharHit = Dictionary.getSingleton().matchInMainDict(context.getSegmentBuff(), context.getCursor(), 1);
+			Hit singleCharHit = Dictionary.getDictionary(cfg.getRemoteDictName()).matchInMainDict(context.getSegmentBuff(), context.getCursor(), 1);
 			if(singleCharHit.isMatch()){//首字成词
 				//输出当前的词
 				Lexeme newLexeme = new Lexeme(context.getBufferOffset() , context.getCursor() , 1 , Lexeme.TYPE_CNWORD);
