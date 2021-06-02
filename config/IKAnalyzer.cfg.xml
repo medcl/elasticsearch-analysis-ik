@@ -10,4 +10,12 @@
 	<!-- <entry key="remote_ext_dict">words_location</entry> -->
 	<!--用户可以在这里配置远程扩展停止词字典-->
 	<!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+	<!-- 连接地址 如果未配置,则不开启数据库同步 -->
+	<entry key="db_url"><![CDATA[jdbc:mysql://127.0.0.1:3306/lexicon?characterEncoding=UTF-8&useSSL=false]]></entry>
+	<!-- 数据库用户名 -->
+	<entry key="db_user">root</entry>
+	<!-- 数据库密码 -->
+	<entry key="db_password">root</entry>
+	<!-- 同步间隔,单位:秒 -->
+	<entry key="db_reload_interval">10</entry>
 </properties>

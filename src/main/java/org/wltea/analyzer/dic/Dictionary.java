@@ -38,10 +38,12 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -56,6 +58,10 @@ import org.elasticsearch.common.io.PathUtils;
 import org.elasticsearch.plugin.analysis.ik.AnalysisIkPlugin;
 import org.wltea.analyzer.cfg.Configuration;
 import org.apache.logging.log4j.Logger;
+import org.wltea.analyzer.db.DBConfigProperties;
+import org.wltea.analyzer.db.DataSourceFactory;
+import org.wltea.analyzer.db.JdbcUtil;
+import org.wltea.analyzer.db.Lexicon;
 import org.wltea.analyzer.help.ESPluginLoggerFactory;
 
 
@@ -82,7 +88,7 @@ public class Dictionary {
 
 	private static final Logger logger = ESPluginLoggerFactory.getLogger(Dictionary.class.getName());
 
-	private static ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
+	private static ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
 
 	private static final String PATH_DIC_MAIN = "main.dic";
 	private static final String PATH_DIC_SURNAME = "surname.dic";
@@ -97,8 +103,18 @@ public class Dictionary {
 	private final static  String EXT_STOP = "ext_stopwords";
 	private final static  String REMOTE_EXT_STOP = "remote_ext_stopwords";
 
+	private final static  String DB_URL = "db_url";
+	private final static  String DB_USER = "db_user";
+	private final static  String DB_PASSWORD = "db_password";
+	private final static  String DB_RELOAD_INTERVAL = "db_reload_interval";
+
 	private Path conf_dir;
 	private Properties props;
+
+	private static DBConfigProperties configProperties;
+	private static JdbcUtil jdbcUtil;
+	private Timestamp lastReloadDate;
+	private Timestamp lastReloadStopWordDate;
 
 	private Dictionary(Configuration cfg) {
 		this.configuration = cfg;
@@ -128,6 +144,7 @@ public class Dictionary {
 				logger.error("ik-analyzer", e);
 			}
 		}
+		loadJdbcConfig();
 	}
 
 	private String getProperty(String key){
@@ -135,6 +152,41 @@ public class Dictionary {
 			return props.getProperty(key);
 		}
 		return null;
+	}
+	private void loadJdbcConfig(){
+
+		String dbUrl = getProperty(DB_URL);
+		if(dbUrl == null || dbUrl.trim().equals("")){
+			logger.info("db synchronization is not turned on, ignore detection");
+			return;
+		}
+		logger.info("init db config start");
+		configProperties = new DBConfigProperties();
+		configProperties.setDbUrl(checkDefault(getProperty(DB_URL),"jdbc:mysql://127.0.0.1:3306/post_bar"));
+		configProperties.setUser(checkDefault(getProperty(DB_USER),"root"));
+		configProperties.setPassword(checkDefault(getProperty(DB_PASSWORD),"root"));
+		configProperties.setReloadInterval(checkDefault(getProperty(DB_RELOAD_INTERVAL),60));
+		jdbcUtil = new JdbcUtil(DataSourceFactory.getDataSource(configProperties));
+		logger.info("db config {}",configProperties.toString());
+		logger.info("init db config end");
+	}
+	private String checkDefault(String value,String defaultValue){
+		if(value == null || "".equals(value.trim())){
+			return defaultValue;
+		}
+		return value.trim();
+	}
+
+	private Integer checkDefault(String value,int defaultValue){
+		if(value == null || "".equals(value.trim())){
+			return defaultValue;
+		}
+		value = value.trim();
+		try {
+			return Integer.parseInt(value);
+		}catch(Exception e){
+			return defaultValue;
+		}
 	}
 	/**
 	 * 词典初始化 由于IK Analyzer的词典采用Dictionary类的静态方法进行词典初始化
@@ -154,6 +206,12 @@ public class Dictionary {
 					singleton.loadSuffixDict();
 					singleton.loadPrepDict();
 					singleton.loadStopWordDict();
+
+					//启动线程
+					if(cfg.isEnableMysqlDict()){
+						// 10 秒是初始延迟可以修改的 ReloadInterval是间隔时间 单位秒
+						pool.scheduleAtFixedRate(new MysqlMonitor(), 10, configProperties.getReloadInterval(), TimeUnit.SECONDS);
+					}
 
 					if(cfg.isEnableRemoteDict()){
 						// 建立监控线程
@@ -571,6 +629,100 @@ public class Dictionary {
 		_MainDict = tmpDict._MainDict;
 		_StopWords = tmpDict._StopWords;
 		logger.info("reload ik dict finished.");
+	}
+
+	void reLoadMysqlMainDict() {
+		if(jdbcUtil == null){
+			logger.info("mysql parameters are not configured, mysql synchronization is ignored");
+			return;
+		}
+		logger.info("======start mysql to reload ik dict.======");
+		List<Lexicon> mainDictList = loadMySQLExtDict();
+
+		AtomicInteger mainDictFillSegmentCount = new AtomicInteger();
+		AtomicInteger mainDictDisableSegmentCount = new AtomicInteger();
+		mainDictList.forEach(lexicon -> {
+			if(lexicon.getFill()){
+				singleton._MainDict.fillSegment(lexicon.getLexiconText().trim().toLowerCase().toCharArray());
+				mainDictFillSegmentCount.getAndIncrement();
+			}else {
+				singleton._MainDict.disableSegment(lexicon.getLexiconText().trim().toLowerCase().toCharArray());
+				mainDictDisableSegmentCount.getAndIncrement();
+			}
+		});
+		logger.info("last update mysql ext dic time :{},fill count:{} ,disable count:{} " ,singleton.lastReloadDate,mainDictFillSegmentCount,mainDictDisableSegmentCount);
+
+		List<Lexicon> stopWordDictList = loadMySQLStopWordDict();
+		AtomicInteger stopWordDictFillSegmentCount = new AtomicInteger();
+		AtomicInteger stopWordDictDisableSegmentCount = new AtomicInteger();
+		stopWordDictList.forEach(lexicon -> {
+			if(lexicon.getFill()){
+				singleton._StopWords.fillSegment(lexicon.getLexiconText().trim().toLowerCase().toCharArray());
+				stopWordDictFillSegmentCount.getAndIncrement();
+			}else {
+				singleton._StopWords.disableSegment(lexicon.getLexiconText().trim().toLowerCase().toCharArray());
+				stopWordDictDisableSegmentCount.getAndIncrement();
+			}
+		});
+		logger.info("last update mysql stop word time :{},fill count:{} ,disable count:{} " ,singleton.lastReloadStopWordDate,stopWordDictFillSegmentCount,stopWordDictDisableSegmentCount);
+		logger.info("======reload mysql ik dict finished.======");
+	}
+	/**
+	 * 从MySql中加载动态词库
+	 */
+	private List<Lexicon> loadMySQLExtDict(){
+
+		String commandSql = "SELECT lexicon_text ,modify_date,lexicon_status,del_flag FROM es_lexicon WHERE lexicon_type = 0 ORDER BY modify_date desc";
+		LinkedList<Object> params = new LinkedList<>();
+		if(singleton.lastReloadDate != null){
+			commandSql = "SELECT lexicon_text ,modify_date,lexicon_status,del_flag FROM es_lexicon WHERE lexicon_type = 0 AND modify_date > ? ORDER BY modify_date ASC";
+			params.add(singleton.lastReloadDate);
+		}
+		List<Lexicon> lexiconList = loadLexicon(commandSql,params.toArray());
+		if(lexiconList == null || lexiconList.size() == 0){
+			logger.info("the latest update record was not found, the last update time :{} " ,singleton.lastReloadDate);
+			return Collections.emptyList();
+		}
+		singleton.lastReloadDate = lexiconList.get(lexiconList.size() - 1).getModifyDate();
+		return lexiconList;
+
+	}
+
+
+	/**
+	 * 从MySql中加载远程停用词库
+	 */
+	private List<Lexicon> loadMySQLStopWordDict(){
+
+		String commandSql = "SELECT lexicon_text ,modify_date,lexicon_status,del_flag FROM es_lexicon WHERE lexicon_type = 1 ORDER BY modify_date ASC";
+		LinkedList<Object> params = new LinkedList<>();
+		if(singleton.lastReloadStopWordDate != null){
+			commandSql = "SELECT lexicon_text ,modify_date,lexicon_status,del_flag FROM es_lexicon WHERE lexicon_type = 1 AND modify_date > ? ORDER BY modify_date ASC";
+			params.add(singleton.lastReloadStopWordDate);
+		}
+		List<Lexicon> lexiconList = loadLexicon(commandSql,params.toArray());
+		if(lexiconList == null || lexiconList.size() == 0){
+			logger.info("the last reload stop word not found, the last update time :{} " ,singleton.lastReloadStopWordDate);
+			return Collections.emptyList();
+		}
+		singleton.lastReloadStopWordDate = lexiconList.get(lexiconList.size() - 1).getModifyDate();
+		return lexiconList;
+	}
+
+	private List<Lexicon> loadLexicon(String commandSql,Object[] param){
+		return jdbcUtil.queryList(commandSql, row -> {
+			String lexiconText = row.getString("lexicon_text");
+			Timestamp modifyDate = row.getTimestamp("modify_date");
+			//词条状态 0正常 1暂停使用
+			int status = row.getInt("lexicon_status");
+			//删除状态 0正常 1暂停使用
+			int deleteStatus = row.getInt("del_flag");
+			Lexicon lexicon = new Lexicon();
+			lexicon.setLexiconText(lexiconText);
+			lexicon.setModifyDate(modifyDate);
+			lexicon.setFill(status == 0 && deleteStatus == 0);
+			return lexicon;
+		},param);
 	}
 
 }

@@ -12,7 +12,7 @@
     <inceptionYear>2011</inceptionYear>
 
     <properties>
-        <elasticsearch.version>7.4.0</elasticsearch.version>
+        <elasticsearch.version>7.13.0</elasticsearch.version>
         <maven.compiler.target>1.8</maven.compiler.target>
         <elasticsearch.assembly.descriptor>${project.basedir}/src/main/assemblies/plugin.xml</elasticsearch.assembly.descriptor>
         <elasticsearch.plugin.name>analysis-ik</elasticsearch.plugin.name>
@@ -94,6 +94,11 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.49</version>
         </dependency>
 
         <dependency>
