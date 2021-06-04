@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collections;
 
 import org.wltea.analyzer.cfg.Configuration;
 import org.wltea.analyzer.dic.Dictionary;
@@ -268,13 +269,13 @@ class AnalyzeContext {
 				while(l != null){
 					this.results.add(l);
 					//字典中无单字，但是词元冲突了，切分出相交词元的前一个词元中的单字
-					/*int innerIndex = index + 1;
+					int innerIndex = index + 1;
 					for (; innerIndex < index + l.getLength(); innerIndex++) {
 						Lexeme innerL = path.peekFirst();
 						if (innerL != null && innerIndex == innerL.getBegin()) {
 							this.outputSingleCJK(innerIndex - 1);
 						}
-					}*/
+					}
 					
 					//将index移至lexeme后
 					index = l.getBegin() + l.getLength();					
@@ -292,6 +293,8 @@ class AnalyzeContext {
 				index++;
 			}
 		}
+		//重排results,解决outputSingleCJK带来的lucence报错（offsets must not go backwards）
+        Collections.sort(this.results);
 		//清空当前的Map
 		this.pathMap.clear();
 	}
