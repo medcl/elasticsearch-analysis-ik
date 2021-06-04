@@ -24,6 +24,9 @@ public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
 
         extra.put("ik_smart", IkTokenizerFactory::getIkSmartTokenizerFactory);
         extra.put("ik_max_word", IkTokenizerFactory::getIkTokenizerFactory);
+        //For compatibility, otherwise mapping parser will fail during upgrade from 2.x to 5.0
+        //   if you have any field using ik as Analyzer/Tokenizer.
+        extra.put("ik", IkTokenizerFactory::getIkSmartTokenizerFactory);
 
         return extra;
     }
@@ -34,6 +37,9 @@ public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
 
         extra.put("ik_smart", IkAnalyzerProvider::getIkSmartAnalyzerProvider);
         extra.put("ik_max_word", IkAnalyzerProvider::getIkAnalyzerProvider);
+        //For compatibility, otherwise mapping parser will fail during upgrade from 2.x to 5.0
+        //   if you have any field using ik as Analyzer/Tokenizer.
+        extra.put("ik", IkAnalyzerProvider::getIkSmartAnalyzerProvider);
 
         return extra;
     }
