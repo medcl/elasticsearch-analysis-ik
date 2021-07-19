@@ -7,7 +7,7 @@
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
         <fileSet>
-        <directory>${project.basedir}/config</directory>
+            <directory>${project.basedir}/config/analysis-ik</directory>
             <outputDirectory>config</outputDirectory>
         </fileSet>
     </fileSets>
@@ -39,6 +39,8 @@
             <useTransitiveFiltering>true</useTransitiveFiltering>
             <includes>
                 <include>org.apache.httpcomponents:httpclient</include>
+                <include>org.projectlombok:lombok</include>
+                <include>org.openingo.kits:redip</include>
             </includes>
         </dependencySet>
     </dependencySets>

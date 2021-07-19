@@ -1,0 +1,31 @@
+dict: # 扩展词库配置
+  local: # 本地扩展词典配置
+    main: # 本地主词典扩展词典文件
+      - extra_main.dic
+      - extra_single_word.dic
+      - extra_single_word_full.dic
+      - extra_single_word_low_freq.dic
+    stop: # 本地stop词典扩展词典文件
+      - extra_stopword.dic
+  remote: # 远程扩展词典配置
+    http:
+      # http 服务地址
+      # main-words path: ${base}/es-dict/main-words/{domain}
+      # stop-words path: ${base}/es-dict/stop-words/{domain}
+      base: http://localhost
+    redis:
+      # main-words key: es-ik-words:{domain}:main-words
+      # stop-words key: es-ik-words:{domain}:stop-words
+      host: localhost
+      port: 6379
+      database: 0
+      username:
+      password:
+    mysql:
+      url: jdbc:mysql://127.0.0.1/ik-db?useSSL=false&serverTimezone=GMT%2B8
+      username: root
+      password: dbadmin
+    refresh: # 刷新配置
+      delay: 10 # 延迟时间，单位s
+      period: 60 # 周期时间，单位s
+
