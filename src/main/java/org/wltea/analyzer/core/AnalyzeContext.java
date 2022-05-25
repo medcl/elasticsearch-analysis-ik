@@ -29,6 +29,7 @@ import java.io.Reader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.TreeSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -72,7 +73,7 @@ class AnalyzeContext {
     //LexemePath位置索引表
     private Map<Integer , LexemePath> pathMap;    
     //最终分词结果集
-    private LinkedList<Lexeme> results;
+    private TreeSet<Lexeme> results;
 	//分词器配置项
 	private Configuration cfg;
 
@@ -83,7 +84,7 @@ class AnalyzeContext {
     	this.buffLocker = new HashSet<String>();
     	this.orgLexemes = new QuickSortSet();
     	this.pathMap = new HashMap<Integer , LexemePath>();    	
-    	this.results = new LinkedList<Lexeme>();
+    	this.results = new TreeSet<Lexeme>();
     }
     
     int getCursor(){
@@ -353,7 +354,7 @@ class AnalyzeContext {
 		if(!this.results.isEmpty()){
 
 			if(Lexeme.TYPE_ARABIC == result.getLexemeType()){
-				Lexeme nextLexeme = this.results.peekFirst();
+				Lexeme nextLexeme = this.results.first();
 				boolean appendOk = false;
 				if(Lexeme.TYPE_CNUM == nextLexeme.getLexemeType()){
 					//合并英文数词+中文数词
@@ -370,7 +371,7 @@ class AnalyzeContext {
 			
 			//可能存在第二轮合并
 			if(Lexeme.TYPE_CNUM == result.getLexemeType() && !this.results.isEmpty()){
-				Lexeme nextLexeme = this.results.peekFirst();
+				Lexeme nextLexeme = this.results.first();
 				boolean appendOk = false;
 				 if(Lexeme.TYPE_COUNT == nextLexeme.getLexemeType()){
 					 //合并中文数词+中文量词
